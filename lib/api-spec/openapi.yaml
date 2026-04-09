@@ -1,0 +1,1298 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: BodegaFlow - Restaurant inventory and requisitions management
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: products
+    description: Product catalog
+  - name: requisitions
+    description: Requisition management
+  - name: inventory
+    description: Inventory movements
+  - name: warehouses
+    description: Warehouse management
+  - name: dashboard
+    description: Dashboard summaries
+  - name: physical-counts
+    description: Physical inventory counts
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /warehouses:
+    get:
+      operationId: listWarehouses
+      tags: [warehouses]
+      summary: List all warehouses
+      responses:
+        "200":
+          description: List of warehouses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Warehouse"
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List all active products
+      parameters:
+        - name: warehouseId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: lowStock
+          in: query
+          required: false
+          schema:
+            type: ["boolean", "null"]
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "201":
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductBody"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [products]
+      summary: List categories
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+  /requisitions:
+    get:
+      operationId: listRequisitions
+      tags: [requisitions]
+      summary: List requisitions
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: areaId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Requisitions list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Requisition"
+    post:
+      operationId: createRequisition
+      tags: [requisitions]
+      summary: Create a new requisition (draft)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequisitionBody"
+      responses:
+        "201":
+          description: Created requisition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Requisition"
+
+  /requisitions/{id}:
+    get:
+      operationId: getRequisition
+      tags: [requisitions]
+      summary: Get a requisition by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Requisition with items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequisitionDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateRequisition
+      tags: [requisitions]
+      summary: Update requisition status or items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRequisitionBody"
+      responses:
+        "200":
+          description: Updated requisition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequisitionDetail"
+
+  /inventory/movements:
+    get:
+      operationId: listMovements
+      tags: [inventory]
+      summary: List inventory movements (Kardex)
+      parameters:
+        - name: productId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: warehouseId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of movements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryMovement"
+    post:
+      operationId: createMovement
+      tags: [inventory]
+      summary: Create a manual inventory movement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMovementBody"
+      responses:
+        "201":
+          description: Created movement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryMovement"
+
+  /inventory/stock:
+    get:
+      operationId: listStock
+      tags: [inventory]
+      summary: Get current stock by warehouse
+      parameters:
+        - name: warehouseId
+          in: query
+          required: false
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Stock list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockItem"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/low-stock:
+    get:
+      operationId: getLowStockProducts
+      tags: [dashboard]
+      summary: Get products below minimum stock
+      responses:
+        "200":
+          description: Low stock products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent requisitions and movements
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /physical-counts:
+    get:
+      operationId: listPhysicalCounts
+      tags: [physical-counts]
+      summary: List physical inventory counts
+      parameters:
+        - in: query
+          name: warehouseId
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: from
+          schema:
+            type: string
+        - in: query
+          name: to
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of physical counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PhysicalCountSummary"
+    post:
+      operationId: createPhysicalCount
+      tags: [physical-counts]
+      summary: Create a new physical count (loads all products in warehouse)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePhysicalCountBody"
+      responses:
+        "201":
+          description: Physical count created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhysicalCountDetail"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /physical-counts/summary:
+    get:
+      operationId: getInventoryDifferencesSummary
+      tags: [physical-counts]
+      summary: Get inventory differences summary report
+      parameters:
+        - in: query
+          name: warehouseId
+          schema:
+            type: integer
+        - in: query
+          name: from
+          schema:
+            type: string
+        - in: query
+          name: to
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Differences summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryDifferencesSummary"
+
+  /physical-counts/{id}:
+    get:
+      operationId: getPhysicalCount
+      tags: [physical-counts]
+      summary: Get physical count details with items
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Physical count detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhysicalCountDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updatePhysicalCount
+      tags: [physical-counts]
+      summary: Update physical count items (save draft)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePhysicalCountBody"
+      responses:
+        "200":
+          description: Updated physical count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhysicalCountDetail"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /physical-counts/{id}/close:
+    post:
+      operationId: closePhysicalCount
+      tags: [physical-counts]
+      summary: Close physical count and generate adjustment movements
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Count closed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhysicalCountDetail"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+        areaId:
+          type: ["integer", "null"]
+        areaName:
+          type: ["string", "null"]
+      required:
+        - id
+        - email
+        - name
+        - role
+
+    Warehouse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+        - id
+        - name
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        categoryId:
+          type: ["integer", "null"]
+        categoryName:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        warehouseId:
+          type: integer
+        warehouseName:
+          type: ["string", "null"]
+        inventoryUnit:
+          type: string
+        requisitionUnit:
+          type: string
+        purchaseUnit:
+          type: string
+        conversionFactor:
+          type: number
+        currentStock:
+          type: number
+        minimumStock:
+          type: number
+        averageCost:
+          type: number
+        isActive:
+          type: boolean
+      required:
+        - id
+        - code
+        - name
+        - warehouseId
+        - inventoryUnit
+        - requisitionUnit
+        - purchaseUnit
+        - conversionFactor
+        - currentStock
+        - minimumStock
+        - averageCost
+        - isActive
+
+    CreateProductBody:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        categoryId:
+          type: ["integer", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        warehouseId:
+          type: integer
+        inventoryUnit:
+          type: string
+        requisitionUnit:
+          type: string
+        purchaseUnit:
+          type: string
+        conversionFactor:
+          type: number
+        minimumStock:
+          type: number
+        averageCost:
+          type: number
+      required:
+        - code
+        - name
+        - warehouseId
+        - inventoryUnit
+        - requisitionUnit
+        - purchaseUnit
+        - conversionFactor
+        - minimumStock
+        - averageCost
+
+    UpdateProductBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        categoryId:
+          type: ["integer", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        warehouseId:
+          type: ["integer", "null"]
+        inventoryUnit:
+          type: ["string", "null"]
+        requisitionUnit:
+          type: ["string", "null"]
+        purchaseUnit:
+          type: ["string", "null"]
+        conversionFactor:
+          type: ["number", "null"]
+        minimumStock:
+          type: ["number", "null"]
+        averageCost:
+          type: ["number", "null"]
+        isActive:
+          type: ["boolean", "null"]
+
+    RequisitionItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        productCode:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        requestedQuantity:
+          type: number
+        approvedQuantity:
+          type: ["number", "null"]
+        dispatchedQuantity:
+          type: ["number", "null"]
+        unit:
+          type: string
+        notes:
+          type: ["string", "null"]
+      required:
+        - id
+        - productId
+        - productName
+        - productCode
+        - requestedQuantity
+        - unit
+
+    Requisition:
+      type: object
+      properties:
+        id:
+          type: integer
+        areaId:
+          type: integer
+        areaName:
+          type: string
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdByName:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        itemCount:
+          type: integer
+      required:
+        - id
+        - areaId
+        - areaName
+        - status
+        - createdByName
+        - createdAt
+        - updatedAt
+        - itemCount
+
+    RequisitionDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        areaId:
+          type: integer
+        areaName:
+          type: string
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdByName:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequisitionItem"
+      required:
+        - id
+        - areaId
+        - areaName
+        - status
+        - createdByName
+        - createdAt
+        - updatedAt
+        - items
+
+    CreateRequisitionBody:
+      type: object
+      properties:
+        notes:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequisitionItemInput"
+      required:
+        - items
+
+    RequisitionItemInput:
+      type: object
+      properties:
+        productId:
+          type: integer
+        requestedQuantity:
+          type: number
+        notes:
+          type: ["string", "null"]
+      required:
+        - productId
+        - requestedQuantity
+
+    UpdateRequisitionBody:
+      type: object
+      properties:
+        status:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        items:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/UpdateRequisitionItemInput"
+
+    UpdateRequisitionItemInput:
+      type: object
+      properties:
+        id:
+          type: integer
+        approvedQuantity:
+          type: ["number", "null"]
+        dispatchedQuantity:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - id
+
+    InventoryMovement:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        productCode:
+          type: string
+        type:
+          type: string
+        quantity:
+          type: number
+        unit:
+          type: string
+        warehouseId:
+          type: integer
+        warehouseName:
+          type: string
+        destinationWarehouseId:
+          type: ["integer", "null"]
+        destinationWarehouseName:
+          type: ["string", "null"]
+        userName:
+          type: string
+        observations:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - productId
+        - productName
+        - productCode
+        - type
+        - quantity
+        - unit
+        - warehouseId
+        - warehouseName
+        - userName
+        - createdAt
+
+    CreateMovementBody:
+      type: object
+      properties:
+        productId:
+          type: integer
+        type:
+          type: string
+        quantity:
+          type: number
+        unit:
+          type: string
+        warehouseId:
+          type: integer
+        destinationWarehouseId:
+          type: ["integer", "null"]
+        observations:
+          type: ["string", "null"]
+      required:
+        - productId
+        - type
+        - quantity
+        - unit
+        - warehouseId
+
+    StockItem:
+      type: object
+      properties:
+        productId:
+          type: integer
+        productCode:
+          type: string
+        productName:
+          type: string
+        categoryName:
+          type: ["string", "null"]
+        warehouseId:
+          type: integer
+        warehouseName:
+          type: string
+        currentStock:
+          type: number
+        minimumStock:
+          type: number
+        averageCost:
+          type: number
+        totalValue:
+          type: number
+        unit:
+          type: string
+        isLowStock:
+          type: boolean
+      required:
+        - productId
+        - productCode
+        - productName
+        - warehouseId
+        - warehouseName
+        - currentStock
+        - minimumStock
+        - averageCost
+        - totalValue
+        - unit
+        - isLowStock
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalProducts:
+          type: integer
+        lowStockCount:
+          type: integer
+        pendingRequisitions:
+          type: integer
+        totalInventoryValue:
+          type: number
+        totalWarehouses:
+          type: integer
+        todayMovements:
+          type: integer
+      required:
+        - totalProducts
+        - lowStockCount
+        - pendingRequisitions
+        - totalInventoryValue
+        - totalWarehouses
+        - todayMovements
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        description:
+          type: string
+        userName:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - type
+        - description
+        - userName
+        - createdAt
+
+    PhysicalCountSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        warehouseId:
+          type: integer
+        warehouseName:
+          type: string
+        countDate:
+          type: string
+        responsibleName:
+          type: string
+        status:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdByName:
+          type: string
+        itemCount:
+          type: integer
+        createdAt:
+          type: string
+        closedAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - warehouseId
+        - warehouseName
+        - countDate
+        - responsibleName
+        - status
+        - createdByName
+        - itemCount
+        - createdAt
+
+    PhysicalCountItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productCode:
+          type: string
+        productName:
+          type: string
+        unit:
+          type: string
+        systemStock:
+          type: number
+        physicalCount:
+          type: number
+          nullable: true
+        difference:
+          type: number
+          nullable: true
+        averageCost:
+          type: number
+        valuedImpact:
+          type: number
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        observation:
+          type: string
+          nullable: true
+      required:
+        - id
+        - productId
+        - productCode
+        - productName
+        - unit
+        - systemStock
+        - averageCost
+
+    PhysicalCountDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        warehouseId:
+          type: integer
+        warehouseName:
+          type: string
+        countDate:
+          type: string
+        responsibleName:
+          type: string
+        status:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdByName:
+          type: string
+        createdAt:
+          type: string
+        closedAt:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhysicalCountItem"
+      required:
+        - id
+        - warehouseId
+        - warehouseName
+        - countDate
+        - responsibleName
+        - status
+        - createdByName
+        - createdAt
+        - items
+
+    CreatePhysicalCountBody:
+      type: object
+      properties:
+        warehouseId:
+          type: integer
+        countDate:
+          type: string
+        responsibleName:
+          type: string
+        notes:
+          type: string
+          nullable: true
+      required:
+        - warehouseId
+        - countDate
+        - responsibleName
+
+    UpdatePhysicalCountItemInput:
+      type: object
+      properties:
+        id:
+          type: integer
+        physicalCount:
+          type: number
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        observation:
+          type: string
+          nullable: true
+      required:
+        - id
+
+    UpdatePhysicalCountBody:
+      type: object
+      properties:
+        responsibleName:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpdatePhysicalCountItemInput"
+      required:
+        - items
+
+    InventoryDifferencesSummary:
+      type: object
+      properties:
+        totalMissing:
+          type: number
+        totalSurplus:
+          type: number
+        valueMissing:
+          type: number
+        valueSurplus:
+          type: number
+        accuracyByItems:
+          type: number
+        accuracyByValue:
+          type: number
+        topDifferences:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+              productName:
+                type: string
+              productCode:
+                type: string
+              totalDifference:
+                type: number
+              totalValuedImpact:
+                type: number
+            required:
+              - productId
+              - productName
+              - productCode
+              - totalDifference
+              - totalValuedImpact
+      required:
+        - totalMissing
+        - totalSurplus
+        - valueMissing
+        - valueSurplus
+        - accuracyByItems
+        - accuracyByValue
+        - topDifferences
